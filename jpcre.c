@@ -19,6 +19,7 @@ char* matches(char* pattern, char* options, char* subject) {
     opts = parse_options(options, &error, &erroffset);
     if (opts < 0) {
         asprintf(&result, "error:Error parsing options %s at offset %d: %s", options, erroffset, error);
+        free(error);
         return result;
     }
     re = pcre_compile(pattern, opts, &error, &erroffset, NULL);
