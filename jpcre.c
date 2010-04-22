@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include <pcre.h>
 #include "jpcre.h"
@@ -15,10 +16,14 @@ char* matches(char* pattern, char* options, char* subject) {
     int substring_length;
     char* result;
 
-    opts = parse_options(options);
+    opts = parse_options(options, &error, &erroffset);
+    if (opts < 0) {
+        asprintf(&result, "error:Error parsing options %s at offset %d: %s", options, erroffset, error);
+        return result;
+    }
     re = pcre_compile(pattern, opts, &error, &erroffset, NULL);
     if (re == NULL) {
-        asprintf(&result, "error:Error compiling %s at offset %d:%s", pattern, erroffset, error);
+        asprintf(&result, "error:Error compiling %s at offset %d: %s", pattern, erroffset, error);
         return result;
     }
 
@@ -51,11 +56,12 @@ char* matches(char* pattern, char* options, char* subject) {
     return result;
 }
 
-int parse_options(char *options) {
+int parse_options(char *options, char **error, int *erroffset) {
     int opts = 0;
 
-    while (*options != 0) {
-        switch (*options++) {
+    char *p = options;
+    while (*p != 0) {
+        switch (*p) {
             case 'f':
                 opts |= PCRE_FIRSTLINE;
                 break;
@@ -100,8 +106,12 @@ int parse_options(char *options) {
                 break;
 
             default:
+                *erroffset = p - options;
+                asprintf(error, "Invalid option %c", *p);
+                return -1;
                 break;
         }
+        p++;
     }
 
     return opts;

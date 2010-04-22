@@ -60,14 +60,24 @@ public class JPcre {
 
     public static String matches(String regex, String value) {
         String options = "";
-        if (regex.startsWith("/")) {
-            String[] parts = regex.split("/");
-            regex = parts[1];
-            if (parts.length == 3) {
-                options = parts[2];
+        String pattern = regex;
+
+        /* The regex is of the format /<pattern>/<options> */
+        if (pattern.startsWith("/")) {
+            pattern = pattern.substring(1);
+            int trailingSlash = pattern.lastIndexOf('/');
+            /* No unescaped trailing slash */
+            if (trailingSlash == -1 || pattern.substring(trailingSlash-1, trailingSlash).equals("\\")) {
+                throw new RuntimeException("Error compiling " + regex + " at offset 0: unmatched slash (/)");
+            } else {
+                /* The pattern is in between the slashes and the options follow */
+                options = pattern.substring(trailingSlash+1);
+                pattern = pattern.substring(0, trailingSlash);
             }
+            /* Unescape any slashes */
+            pattern = pattern.replace("\\/", "/");
         }
-        String result = RawJPcre.matches(regex, options, value);
+        String result = RawJPcre.matches(pattern, options, value);
         String[] parts = result.split(":", 2);
         if ("error".equals(parts[0])) {
             throw new RuntimeException(parts[1]);
